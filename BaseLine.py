@@ -3,7 +3,6 @@
 import pandas as pd
 import numpy as np
 import re
-import math
 
 # Text and feature engineering
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -46,7 +45,7 @@ def remove_emoji(text):
 
 # Stopwords
 NLTK_stop_words_list = stopwords.words('english')
-custom_stop_words_list = ['...']  # You can customize this list as needed
+custom_stop_words_list = ['bug', 'issue', 'error', 'fix', 'please', 'thanks']  # You can customize this list as needed
 final_stop_words_list = NLTK_stop_words_list + custom_stop_words_list
 
 
@@ -140,7 +139,7 @@ for repeated_time in range(REPEAT):
     # --- 4.1 Split into train/test ---
     indices = np.arange(data.shape[0])
     train_index, test_index = train_test_split(
-        indices, test_size=0.2, random_state=repeated_time
+        indices, test_size=0.3, random_state=repeated_time
     )
 
     train_text = data[text_col].iloc[train_index]
