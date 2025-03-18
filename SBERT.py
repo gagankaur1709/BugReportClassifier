@@ -1,3 +1,5 @@
+import os
+
 import pandas as pd
 import numpy as np
 import re
@@ -5,12 +7,10 @@ import nltk
 from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer, PorterStemmer
 from nltk.sentiment import SentimentIntensityAnalyzer
-from sklearn.preprocessing import OneHotEncoder
 from sklearn.svm import SVC
 from sklearn.model_selection import train_test_split, GridSearchCV
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, auc, roc_curve
 from sentence_transformers import SentenceTransformer
-import joblib
 
 # Download NLTK resources
 nltk.download('stopwords')
@@ -66,34 +66,58 @@ def preprocess_text(text):
     return text
 
 
+def preprocess_comments(text):
+    """
+    Preprocess comments by removing HTML, special characters, stopwords, etc.
+    """
+    # Remove HTML tags
+    text = re.sub(r'<.*?>', '', text)
+
+    # Remove URLs
+    text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
+
+    # Remove code snippets (e.g., text within backticks or code blocks)
+    text = re.sub(r'`.*?`', '', text)
+
+    # Remove special characters and punctuation (keep alphanumeric and whitespace)
+    text = re.sub(r'[^a-zA-Z\s]', '', text)
+
+    # Convert to lowercase
+    text = text.lower()
+
+    # Remove stopwords
+    stop_words = set(stopwords.words('english'))
+    text = ' '.join([word for word in text.split() if word not in stop_words])
+
+    # Remove extra whitespace
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text
+
+
 ########## 2. Feature Extraction ##########
 def extract_features(data):
     """
-    Extract features using SBERT embeddings, metadata encoding, and sentiment analysis.
+    Extract features using SBERT embeddings and sentiment analysis.
     """
+    # Preprocess Comments
+    data['Comments'] = data['Comments'].apply(preprocess_comments)
+
     # SBERT Embeddings (for Title + Body)
     sbert_model = SentenceTransformer('all-MiniLM-L6-v2')
     text_embeddings = sbert_model.encode(data['text'].tolist())
-
-    # Metadata Encoding (One-Hot Encoding for categorical features)
-    metadata_columns = ['State', 'Labels']  # Use relevant metadata columns
-    if all(col in data.columns for col in metadata_columns):
-        encoder = OneHotEncoder(sparse_output=False)  # Use sparse_output=False
-        metadata_encoded = encoder.fit_transform(data[metadata_columns])
-    else:
-        raise KeyError(f"Metadata columns {metadata_columns} not found in the dataset.")
 
     # Sentiment Analysis (VADER for Comments)
     sia = SentimentIntensityAnalyzer()
     sentiment_scores = data['Comments'].apply(lambda x: sia.polarity_scores(x)['compound'])
 
     # Combine all features
-    features = np.hstack([text_embeddings, metadata_encoded, sentiment_scores.values.reshape(-1, 1)])
+    features = np.hstack([text_embeddings, sentiment_scores.values.reshape(-1, 1)])
     return features
 
 
 ########## 3. Classification ##########
-def train_classifier(X_train, y_train):
+def train_classifier(x_train, y_train):
     """
     Train an SVM classifier with RBF kernel using GridSearchCV for hyperparameter tuning.
     """
@@ -104,7 +128,7 @@ def train_classifier(X_train, y_train):
     }
     svm = SVC(probability=True)  # Enable probability for AUC calculation
     grid_search = GridSearchCV(svm, param_grid, cv=5, scoring='roc_auc')
-    grid_search.fit(X_train, y_train)
+    grid_search.fit(x_train, y_train)
     return grid_search.best_estimator_
 
 
@@ -113,22 +137,28 @@ def evaluate_model(model, X_test, y_test):
     """
     Evaluate the model using accuracy, precision, recall, F1-score, and AUC.
     """
+    # --- Make predictions & evaluate ---
     y_pred = model.predict(X_test)
-    y_pred_proba = model.predict_proba(X_test)[:, 1]  # Probabilities for AUC
 
+    # Accuracy
     accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred, average='macro')  # Suppress warning
+
+    # Precision (macro)
+    precision = precision_score(y_test, y_pred, average='macro', zero_division=0)
+
+    # Recall (macro)
     recall = recall_score(y_test, y_pred, average='macro')
+
+
     f1 = f1_score(y_test, y_pred, average='macro')
+
     # AUC
     # If labels are 0/1 only, this works directly.
     # If labels are something else, adjust pos_label accordingly.
-    fpr, tpr, _ = roc_curve(y_test, y_pred, pos_label=1)
-    aucc = auc(fpr, tpr)
+    fpr, tpr, _ = roc_curve(y_test, y_pred, pos_label=1)  # Use y_pred_proba for AUC
+    auc_val = auc(fpr, tpr)
 
-    # auc = roc_auc_score(y_test, y_pred_proba)
-
-    return accuracy, precision, recall, f1, aucc
+    return accuracy, precision, recall, f1, auc_val
 
 
 ########## Main Script ##########
@@ -155,6 +185,10 @@ if __name__ == "__main__":
 
     # Repeat the process 30 times
     REPEAT = 30
+
+    # 3) Output CSV file name
+    out_csv_name = os.path.join('results', f'{project}_SBERT.csv')
+
     accuracies, precisions, recalls, f1_scores, auc_scores = [], [], [], [], []
 
     for i in range(REPEAT):
@@ -165,13 +199,12 @@ if __name__ == "__main__":
         classifier = train_classifier(X_train, y_train)
 
         # Evaluate model
-        accuracy, precision, recall, f1, auc = evaluate_model(classifier, X_test, y_test)
+        accuracy, precision, recall, f1, aucc = evaluate_model(classifier, X_test, y_test)
         accuracies.append(accuracy)
         precisions.append(precision)
         recalls.append(recall)
         f1_scores.append(f1)
-        auc_scores.append(auc)
-
+        auc_scores.append(aucc)
 
     # Calculate average metrics
     avg_accuracy = np.mean(accuracies)
@@ -180,7 +213,7 @@ if __name__ == "__main__":
     avg_f1 = np.mean(f1_scores)
     avg_auc = np.mean(auc_scores)
 
-    print("\n=== Average Metrics ===")
+    print("\n=== SVM + SBERT + VADAR ===")
     print(f"Number of repeats:     {REPEAT}")
     print(f"Average Accuracy:  {avg_accuracy:.4f}")
     print(f"Average Precision: {avg_precision:.4f}")
@@ -188,6 +221,26 @@ if __name__ == "__main__":
     print(f"Average F1-Score:  {avg_f1:.4f}")
     print(f"Average AUC:       {avg_auc:.4f}")
 
-    # Save the model
-    joblib.dump(classifier, 'performance_bug_classifier.pkl')
-    print("Model saved as 'performance_bug_classifier.pkl'")
+    # Save final results to CSV (append mode)
+    try:
+        # Attempt to check if the file already has a header
+        existing_data = pd.read_csv(out_csv_name, nrows=1)
+        header_needed = False
+    except:
+        header_needed = True
+
+    df_log = pd.DataFrame(
+        {
+            'repeated_times': [REPEAT],
+            'Accuracy': [avg_accuracy],
+            'Precision': [avg_precision],
+            'Recall': [avg_recall],
+            'F1': [avg_f1],
+            'AUC': [avg_auc],
+            'CV_list(AUC)': [str(auc_scores)]
+        }
+    )
+
+    df_log.to_csv(out_csv_name, mode='a', header=header_needed, index=False)
+
+    print(f"\nResults have been saved to: {out_csv_name}")

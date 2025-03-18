@@ -107,7 +107,7 @@ datafile = 'Title+Body.csv'
 REPEAT = 30
 
 # 3) Output CSV file name
-out_csv_name = f'../{project}_NB.csv'
+out_csv_name = os.path.join('results', f'{project}_NB.csv')
 
 # ========== Read and clean data ==========
 data = pd.read_csv(datafile).fillna('')
