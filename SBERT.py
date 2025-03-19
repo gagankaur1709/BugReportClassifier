@@ -237,7 +237,11 @@ if __name__ == "__main__":
             'Recall': [avg_recall],
             'F1': [avg_f1],
             'AUC': [avg_auc],
-            'CV_list(AUC)': [str(auc_scores)]
+            'CV_list(AUC)': [str(auc_scores)],
+            'CV_list(FI)': [str(f1_scores)],
+            'CV_list(RECALL)': [str(recalls)],
+            'CV_list(PRECISION)': [str(precisions)],
+            'CV_list(ACCURACY)': [str(accuracies)]
         }
     )
 

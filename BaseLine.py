@@ -227,7 +227,12 @@ df_log = pd.DataFrame(
         'Recall': [final_recall],
         'F1': [final_f1],
         'AUC': [final_auc],
-        'CV_list(AUC)': [str(auc_values)]
+        'CV_list(AUC)': [str(auc_values)],
+        'CV_list(FI)': [str(f1_scores)],
+        'CV_list(RECALL)': [str(recalls)],
+        'CV_list(PRECISION)': [str(precisions)],
+        'CV_list(ACCURACY)': [str(accuracies)]
+
     }
 )
 
