@@ -164,7 +164,8 @@ def evaluate_model(model, X_test, y_test):
 ########## Main Script ##########
 if __name__ == "__main__":
     # Load dataset
-    project = 'pytorch'
+    # Choose the project (options: 'pytorch', 'tensorflow', 'keras', 'incubator-mxnet', 'caffe')
+    project = 'caffe'
     path = f'/Users/gagan/Documents/Dataset/{project}.csv'
     pd_all = pd.read_csv(path).sample(frac=1, random_state=999)  # Shuffle
 

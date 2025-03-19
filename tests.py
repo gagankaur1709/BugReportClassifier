@@ -21,16 +21,21 @@ def extract_metric_values(cv_list, metric):
     float_values = [float(match) for match in re.findall(pattern, cv_list)]
     return float_values
 
+
+# Choose the project (options: 'pytorch', 'tensorflow', 'keras', 'incubator-mxnet', 'caffe')
+project = 'caffe'
+baseline_path = f"./results/{project}_NB.csv"
+sbert_path = f"./results/{project}_SBERT.csv"
 # Load the CSV files
-baseline_results = pd.read_csv("./results/pytorch_NB.csv")
-sbert_results = pd.read_csv("./results/pytorch_SBERT.csv")
+baseline_results = pd.read_csv(baseline_path)
+sbert_results = pd.read_csv(sbert_path)
 
 # List of metrics to evaluate
 metrics = ["AUC", "FI", "Recall", "Precision", "Accuracy"]
 
 # Perform statistical tests for each metric
 for metric in metrics:
-    print(f"\n=== Statistical Analysis for {metric} ===")
+    print(f"\n=== Statistical Analysis for {metric} {project} ===")
 
     # Extract metric values for both models
     baseline_values = extract_metric_values(baseline_results[f"CV_list({metric.upper()})"].iloc[0], metric)
