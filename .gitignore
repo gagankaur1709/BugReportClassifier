@@ -174,7 +174,7 @@ cython_debug/
 .pypirc
 
 # Ignore the results folder
-/results/
+
 
 # Ignore specific files
 Title+Body.csv
