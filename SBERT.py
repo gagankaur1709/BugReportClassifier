@@ -4,7 +4,6 @@ import pandas as pd
 import numpy as np
 import re
 import nltk
-from nltk.corpus import stopwords
 from nltk.stem import WordNetLemmatizer, PorterStemmer
 from nltk.sentiment import SentimentIntensityAnalyzer
 from sklearn.svm import SVC
@@ -13,7 +12,6 @@ from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_sc
 from sentence_transformers import SentenceTransformer
 
 # Download NLTK resources
-nltk.download('stopwords')
 nltk.download('wordnet')
 nltk.download('vader_lexicon')
 
@@ -49,12 +47,6 @@ def preprocess_text(text):
     # Remove special characters and numbers
     text = re.sub(r'[^a-zA-Z\s]', '', text)
 
-    # Remove stopwords
-    stop_words = set(stopwords.words('english'))
-    custom_stopwords = {'bug', 'issue', 'error', 'fix'}  # Add domain-specific stopwords
-    stop_words.update(custom_stopwords)
-    text = ' '.join([word for word in text.split() if word not in stop_words])
-
     # Lemmatization
     lemmatizer = WordNetLemmatizer()
     text = ' '.join([lemmatizer.lemmatize(word) for word in text.split()])
@@ -84,10 +76,6 @@ def preprocess_comments(text):
 
     # Convert to lowercase
     text = text.lower()
-
-    # Remove stopwords
-    stop_words = set(stopwords.words('english'))
-    text = ' '.join([word for word in text.split() if word not in stop_words])
 
     # Remove extra whitespace
     text = re.sub(r'\s+', ' ', text).strip()

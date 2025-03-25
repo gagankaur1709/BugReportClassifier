@@ -15,12 +15,6 @@ from sklearn.metrics import (accuracy_score, precision_score, recall_score,
 # Classifier
 from sklearn.naive_bayes import GaussianNB
 
-# Text cleaning & stopwords
-import nltk
-
-nltk.download('stopwords')
-from nltk.corpus import stopwords
-
 
 ########## 2. Define text preprocessing methods ##########
 
@@ -41,17 +35,6 @@ def remove_emoji(text):
                                u"\U000024C2-\U0001F251"  # enclosed characters
                                "]+", flags=re.UNICODE)
     return emoji_pattern.sub(r'', text)
-
-
-# Stopwords
-NLTK_stop_words_list = stopwords.words('english')
-custom_stop_words_list = ['bug', 'issue', 'error', 'fix', 'please', 'thanks']  # You can customize this list as needed
-final_stop_words_list = NLTK_stop_words_list + custom_stop_words_list
-
-
-def remove_stopwords(text):
-    """Remove stopwords from the text."""
-    return " ".join([word for word in str(text).split() if word not in final_stop_words_list])
 
 
 def clean_str(string):
@@ -119,7 +102,6 @@ original_data = data.copy()
 # Text cleaning
 data[text_col] = data[text_col].apply(remove_html)
 data[text_col] = data[text_col].apply(remove_emoji)
-data[text_col] = data[text_col].apply(remove_stopwords)
 data[text_col] = data[text_col].apply(clean_str)
 
 # ========== Hyperparameter grid ==========
